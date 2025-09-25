@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: MetaCRM API
+  version: 1.0.0
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  headers:
+    X-Trace-Id:
+      description: Correlates logs across services
+      schema: { type: string }
+    X-Correlation-Id:
+      description: Business-level correlation id
+      schema: { type: string }
+  schemas:
+    PrincipalJWT:
+      type: object
+      description: >
+        JWT клеймы. `sub` = principal id, `typ` = user|service|external|system,
+        `tid` = tenant id, `act` = actor principal (кто исполнил),
+        `obo` = on-behalf-of principal (от чьего лица), `gen` = версия прав.
+      properties:
+        sub:
+          type: string
+          description: Subject - principal id
+          example: "prn:12345"
+        typ:
+          type: string
+          enum: [user, service, external, system]
+          description: type of principal
+        tid:
+          type: string
+          format: uuid
+          description: tenant id
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        act:
+          type: string
+          nullable: true
+          description: actor principal id
+          example: "prn:9001"
+        obo:
+          type: string
+          nullable: true
+          description: on-behalf-of principal id
+          example: "prn:7777"
+        scope:
+          type: array
+          items: { type: string }
+          description: list of rights
+          example: ["crm.read","crm.orders.write"]
+        gen:
+          type: integer
+          description: version of rights
+          example: 42
+        iat:
+          type: integer
+          description: issued at, epoch seconds
+        exp:
+          type: integer
+          description: expiration time, epoch seconds
+        jti:
+          type: string
+          description: JWT ID
+security:
+  - bearerAuth: []
+paths:
+  /v1/customers:
+    get:
+      summary: List customers
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: X-Trace-Id
+          schema: { type: string }
+        - in: header
+          name: X-Correlation-Id
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK

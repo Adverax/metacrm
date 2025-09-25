@@ -39,18 +39,6 @@ CREATE TABLE security.object
     -- Record creation timestamp
     created_at  timestamptz NOT NULL DEFAULT now(),
     
-    -- Last modification timestamp
-    -- Automatically updated by audit triggers
-    updated_at  timestamptz NOT NULL DEFAULT now(),
-    
-    -- Principal who created this object
-    -- References iam.user for audit trail
-    created_by_principal_id BIGINT      NOT NULL DEFAULT bootstrap.current_principal_id() REFERENCES iam.user (tenant_id, id) ON DELETE RESTRICT,
-    
-    -- Principal who last updated this object
-    -- References iam.user for audit trail
-    updated_by_principal_id BIGINT      NOT NULL DEFAULT bootstrap.current_principal_id() REFERENCES iam.user (tenant_id, id) ON DELETE RESTRICT,
-    
     -- Constraint: api_name must start with letter or underscore and contain only alphanumeric characters and underscores
     CONSTRAINT security_object_api_name_check CHECK (api_name ~ '^[_a-zA-Z][a-zA-Z0-9_]{0,62}$'),
     
@@ -60,7 +48,6 @@ CREATE TABLE security.object
 ) PARTITION BY HASH (tenant_id);
 
 SELECT bootstrap.make_partitions('security', 'object', 16);
-SELECT bootstrap.attach_audit_triggers('security', 'object');
 
 -- ========================================
 -- SECURITY FIELD TABLE
@@ -96,7 +83,7 @@ CREATE TABLE security.field
     -- Reference to the security object this field belongs to
     -- References security.object.id
     -- CASCADE DELETE ensures fields are removed when object is deleted
-    object_id   BIGINT      NOT NULL REFERENCES security.object (id) ON DELETE CASCADE,
+    object_id   BIGINT      NOT NULL,
     
     -- API-friendly field identifier
     -- Used in code and API endpoints (e.g., 'email', 'salary', 'ssn', 'phone')
@@ -107,20 +94,12 @@ CREATE TABLE security.field
     -- Record creation timestamp
     created_at  timestamptz NOT NULL DEFAULT now(),
     
-    -- Last modification timestamp
-    -- Automatically updated by audit triggers
-    updated_at  timestamptz NOT NULL DEFAULT now(),
-    
-    -- Principal who created this field
-    -- References iam.user for audit trail
-    created_by_principal_id BIGINT      NOT NULL DEFAULT bootstrap.current_principal_id() REFERENCES iam.user (tenant_id, id) ON DELETE RESTRICT,
-    
-    -- Principal who last updated this field
-    -- References iam.user for audit trail
-    updated_by_principal_id BIGINT      NOT NULL DEFAULT bootstrap.current_principal_id() REFERENCES iam.user (tenant_id, id) ON DELETE RESTRICT,
-    
     -- Constraint: api_name must start with letter or underscore and contain only alphanumeric characters and underscores
     CONSTRAINT security_field_api_name_check CHECK (api_name ~ '^[_a-zA-Z][a-zA-Z0-9_]{0,62}$'),
+
+    -- Foreign key to the security object this field belongs to
+    -- CASCADE DELETE ensures fields are removed when object is deleted
+    CONSTRAINT security_field_object_fk FOREIGN KEY (tenant_id, object_id) REFERENCES security.object (tenant_id, id) ON DELETE CASCADE,
     
     -- Unique constraint: api_name must be unique within object and tenant
     -- Ensures no duplicate field names within the same object
@@ -165,7 +144,7 @@ CREATE TABLE security.permission_set
     -- References cluster.group.id
     -- CASCADE DELETE ensures permission sets are removed when group is deleted
     -- NULL for standalone permission sets not tied to specific groups
-    group_id      BIGINT REFERENCES cluster."group" (id) ON DELETE CASCADE,
+    group_id      BIGINT,
     
     -- API-friendly permission set identifier
     -- Used in code and API endpoints (e.g., 'admin_permissions', 'user_permissions', 'read_only')
@@ -193,23 +172,34 @@ CREATE TABLE security.permission_set
     
     -- Principal who created this permission set
     -- References iam.user for audit trail
-    created_by_principal_id BIGINT      NOT NULL DEFAULT bootstrap.current_principal_id() REFERENCES iam.user (tenant_id, id) ON DELETE RESTRICT,
+    created_by_principal_id BIGINT      NOT NULL DEFAULT bootstrap.current_principal_id(),
     
     -- Principal who last updated this permission set
     -- References iam.user for audit trail
-    updated_by_principal_id BIGINT      NOT NULL DEFAULT bootstrap.current_principal_id() REFERENCES iam.user (tenant_id, id) ON DELETE RESTRICT,
+    updated_by_principal_id BIGINT      NOT NULL DEFAULT bootstrap.current_principal_id(),
     
     -- Principal who deleted this permission set
     -- References iam.user for audit trail
-    deleted_by_principal_id BIGINT                                               REFERENCES iam.user (tenant_id, id) ON DELETE RESTRICT,
-    
-    -- Principal who owns this permission set
-    -- References iam.user for ownership-based access control
-    -- Owner has full control over the permission set
-    owner_id      BIGINT      NOT NULL DEFAULT bootstrap.current_principal_id() REFERENCES iam.user (tenant_id, id) ON DELETE RESTRICT,
+    deleted_by_principal_id BIGINT,
     
     -- Constraint: api_name must start with letter or underscore and contain only alphanumeric characters and underscores
-    CONSTRAINT security_permission_set_api_name_check CHECK (api_name ~ '^[_a-zA-Z][a-zA-Z0-9_]{0,62}$')
+    CONSTRAINT security_permission_set_api_name_check CHECK (api_name ~ '^[_a-zA-Z][a-zA-Z0-9_]{0,62}$')б
+
+    -- Foreign key to the group this permission set belongs to
+    -- CASCADE DELETE ensures permission sets are removed when group is deleted
+    CONSTRAINT security_permission_set_group_fk FOREIGN KEY (tenant_id, group_id) REFERENCES cluster."group" (tenant_id, id) ON DELETE CASCADE,
+
+    -- Foreign key to the principal who created this permission set
+    -- CASCADE DELETE ensures permission sets are removed when principal is deleted
+    CONSTRAINT security_permission_set_created_by_principal_fk FOREIGN KEY (tenant_id, created_by_principal_id) REFERENCES iam.principal (tenant_id, id) ON DELETE RESTRICT,
+
+    -- Foreign key to the principal who last updated this permission set
+    -- CASCADE DELETE ensures permission sets are removed when principal is deleted
+    CONSTRAINT security_permission_set_updated_by_principal_fk FOREIGN KEY (tenant_id, updated_by_principal_id) REFERENCES iam.principal (tenant_id, id) ON DELETE RESTRICT,
+
+    -- Foreign key to the principal who deleted this permission set
+    -- CASCADE DELETE ensures permission sets are removed when principal is deleted
+    CONSTRAINT security_permission_set_deleted_by_principal_fk FOREIGN KEY (tenant_id, deleted_by_principal_id) REFERENCES iam.principal (tenant_id, id) ON DELETE RESTRICT,
 ) PARTITION BY HASH (tenant_id);
 
 SELECT bootstrap.make_partitions('security', 'permission_set', 16);
@@ -237,13 +227,13 @@ CREATE UNIQUE INDEX ux_permission_set_api_name_alive ON security.permission_set 
 -- 
 -- Permission Bitmask Values:
 --   1 = READ permission
---   2 = WRITE permission  
---   4 = DELETE permission
---   8 = ADMIN permission (can modify permissions)
+--   2 = UPDATE permission  
+--   4 = CREATE permission
+--   8 = DELETE permission
 -- 
 -- Example usage:
 --   INSERT INTO security.object_permissions (permission_set_id, object_id, permissions) 
---   VALUES (1, 1, 7); -- READ + WRITE + DELETE
+--   VALUES (1, 1, 7); -- READ + UPDATE + CREATE
 --   
 --   SELECT * FROM security.object_permissions WHERE permission_set_id = 1 AND object_id = 1;
 CREATE TABLE security.object_permissions
@@ -268,10 +258,10 @@ CREATE TABLE security.object_permissions
     
     -- Permission bitmask for this object
     -- Bit 0 (1) = READ permission
-    -- Bit 1 (2) = WRITE permission
-    -- Bit 2 (4) = DELETE permission
-    -- Bit 3 (8) = ADMIN permission
-    -- Example: 7 = READ + WRITE + DELETE (1 + 2 + 4)
+    -- Bit 1 (2) = UPDATE permission
+    -- Bit 2 (4) = CREATE permission
+    -- Bit 3 (8) = DELETE permission
+    -- Example: 7 = READ + UPDATE + CREATE (1 + 2 + 4)
     permissions       INTEGER   NOT NULL DEFAULT 0,
     
     -- Unique constraint: one permission record per permission set + object combination
@@ -300,8 +290,6 @@ SELECT bootstrap.attach_audit_triggers('security', 'object_permissions');
 -- Permission Bitmask Values:
 --   1 = READ permission
 --   2 = WRITE permission  
---   4 = DELETE permission
---   8 = ADMIN permission (can modify permissions)
 -- 
 -- Example usage:
 --   INSERT INTO security.field_permissions (permission_set_id, field_id, permissions) 
@@ -331,8 +319,6 @@ CREATE TABLE security.field_permissions
     -- Permission bitmask for this field
     -- Bit 0 (1) = READ permission
     -- Bit 1 (2) = WRITE permission
-    -- Bit 2 (4) = DELETE permission
-    -- Bit 3 (8) = ADMIN permission
     -- Example: 1 = READ only (for sensitive fields like salary, SSN)
     -- Example: 3 = READ + WRITE (for editable fields)
     permissions       INTEGER   NOT NULL DEFAULT 0,
