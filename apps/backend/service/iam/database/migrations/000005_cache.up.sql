@@ -25,7 +25,7 @@ CREATE SCHEMA IF NOT EXISTS cache;
 -- 
 -- Example usage:
 --   INSERT INTO cache.user_object_permissions (tenant_id, user_id, object_id, base_permissions, expires_at) 
---   VALUES ('uuid', 123, 456, 7, now() + interval '1 hour'); -- READ+CREATE+UPDATE
+--   VALUES ('uuid', 123, 456, 7, now() + interval '1 hour'); -- READ+UPDATE+CREATE
 --   
 --   SELECT base_permissions FROM cache.user_object_permissions 
 --   WHERE tenant_id = 'uuid' AND user_id = 123 AND object_id = 456 AND expires_at > now();
@@ -61,11 +61,9 @@ CREATE TABLE cache.user_object_permissions (
 
 SELECT bootstrap.make_partitions('cache', 'user_object_permissions', 16);
 
-CREATE INDEX ON cache.user_object_permissions (expires_at) WHERE expires_at < now();
-CREATE INDEX ON cache.user_object_permissions (tenant_id, user_id, expires_at) WHERE expires_at > now();
-
 -- Index for fast user permission lookups
 -- Used to find all permissions for a specific user across all objects
+CREATE INDEX ON cache.user_object_permissions (expires_at) WHERE expires_at < now();
 CREATE INDEX ON cache.user_object_permissions (tenant_id, user_id, expires_at) WHERE expires_at > now();
 
 -- User field restrictions cache table for field-level security (FLS)
@@ -408,7 +406,7 @@ $$;
 --   p_row_id: Specific row/record ID to check permissions for
 --   p_ttl_seconds: Cache TTL in seconds (default: 3600 = 1 hour)
 -- 
--- Returns: INTEGER - Permission bitmask for the specific row (1=READ, 2=CREATE, 4=UPDATE, 8=DELETE)
+-- Returns: INTEGER - Permission bitmask for the specific row (1=READ, 2=UPDATE, 4=CREATE, 8=DELETE)
 -- 
 -- Examples:
 --   SELECT cache.get_row_permissions('uuid', 123, 456, 999); -- Check row permissions
@@ -500,7 +498,7 @@ CREATE OR REPLACE FUNCTION cache.has_permission(
     p_object_id BIGINT, 
     p_field_id BIGINT DEFAULT NULL,
     p_row_id BIGINT DEFAULT NULL,
-    p_required_permission INTEGER DEFAULT 1,  -- 1 = READ, 2 = CREATE, 4 = UPDATE, 8 = DELETE
+    p_required_permission INTEGER DEFAULT 1,  -- 1 = READ, 2 = UPDATE, 4 = CREATE, 8 = DELETE
     p_ttl_seconds INTEGER DEFAULT 3600
 )
 RETURNS BOOLEAN
@@ -819,16 +817,7 @@ CREATE TRIGGER trg_field_permissions_cache_invalidation
 -- ADDITIONAL FUNCTIONS
 -- ========================================
 
--- Function to invalidate user cache
-CREATE OR REPLACE FUNCTION cache.invalidate_user_cache(p_tenant_id UUID, p_user_id BIGINT)
-RETURNS void
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    DELETE FROM cache.user_cache 
-    WHERE tenant_id = p_tenant_id AND user_id = p_user_id;
-END;
-$$;
+
 
 -- Function to invalidate entire tenant cache
 CREATE OR REPLACE FUNCTION cache.invalidate_tenant_cache(p_tenant_id UUID)
@@ -836,9 +825,6 @@ RETURNS void
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    DELETE FROM cache.user_cache WHERE tenant_id = p_tenant_id;
-    DELETE FROM cache.role_cache WHERE tenant_id = p_tenant_id;
-    DELETE FROM cache.group_cache WHERE tenant_id = p_tenant_id;
     DELETE FROM cache.user_object_permissions WHERE tenant_id = p_tenant_id;
     DELETE FROM cache.user_field_restrictions WHERE tenant_id = p_tenant_id;
     DELETE FROM cache.user_row_permissions WHERE tenant_id = p_tenant_id;

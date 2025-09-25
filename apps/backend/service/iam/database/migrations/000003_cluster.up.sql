@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS cluster.group_member
     -- Human-readable unique identifier for API usage
     -- Format: 'grp' + 16 hex characters (e.g., 'grp_a1b2c3d4e5f67890')
     -- Used in REST APIs and external integrations
-    record_id               VARCHAR(19) NOT NULL UNIQUE DEFAULT bootstrap.generate_pk('grp'),
+    record_id               VARCHAR(19) NOT NULL UNIQUE DEFAULT bootstrap.generate_pk('grm'),
     
     -- Record creation timestamp
     created_at              timestamptz NOT NULL        DEFAULT now(),
