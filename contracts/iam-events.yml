@@ -1,0 +1,955 @@
+asyncapi: 3.0.0
+info:
+  title: IAM Service Events
+  version: 1.0.0
+  description: |
+    Complete event specifications for IAM microservice in Event-Driven Architecture.
+    This service publishes 85+ events across 17 categories when IAM entities are created, updated, or deleted.
+    
+    Event Categories:
+    - User Events (5 events)
+    - Role Events (5 events) 
+    - Territory Events (4 events)
+    - Group Events (5 events)
+    - Group Member Events (4 events)
+    - Principal Events (5 events)
+    - Identity Events (5 events)
+    - Security Object Events (3 events)
+    - Security Field Events (3 events)
+    - Permission Set Events (5 events)
+    - Object Permission Events (4 events)
+    - Field Permission Events (4 events)
+    - Authentication Events (7 events)
+    - Cache Events (6 events)
+    - Audit Events (4 events)
+    - Integration Events (4 events)
+    - Notification Events (5 events)
+  contact:
+    name: IAM Team
+    email: iam-team@company.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  production:
+    host: kafka.company.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+  staging:
+    host: kafka-staging.company.com:9092
+    protocol: kafka
+    description: Staging Kafka cluster
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka
+
+defaultContentType: application/json
+
+channels:
+  # ========================================
+  # USER EVENTS (5 events)
+  # ========================================
+  iam.user.created:
+    address: iam.user.created
+    messages:
+      userCreated:
+        $ref: '#/components/messages/UserCreated'
+  
+  iam.user.updated:
+    address: iam.user.updated
+    messages:
+      userUpdated:
+        $ref: '#/components/messages/UserUpdated'
+  
+  iam.user.deleted:
+    address: iam.user.deleted
+    messages:
+      userDeleted:
+        $ref: '#/components/messages/UserDeleted'
+
+  iam.user.manager_changed:
+    address: iam.user.manager_changed
+    messages:
+      userManagerChanged:
+        $ref: '#/components/messages/UserManagerChanged'
+
+  iam.user.status_changed:
+    address: iam.user.status_changed
+    messages:
+      userStatusChanged:
+        $ref: '#/components/messages/UserStatusChanged'
+
+  # ========================================
+  # ROLE EVENTS (5 events)
+  # ========================================
+  iam.role.created:
+    address: iam.role.created
+    messages:
+      roleCreated:
+        $ref: '#/components/messages/RoleCreated'
+
+  iam.role.updated:
+    address: iam.role.updated
+    messages:
+      roleUpdated:
+        $ref: '#/components/messages/RoleUpdated'
+
+  iam.role.deleted:
+    address: iam.role.deleted
+    messages:
+      roleDeleted:
+        $ref: '#/components/messages/RoleDeleted'
+
+  iam.role.hierarchy_changed:
+    address: iam.role.hierarchy_changed
+    messages:
+      roleHierarchyChanged:
+        $ref: '#/components/messages/RoleHierarchyChanged'
+
+  iam.role.permissions_changed:
+    address: iam.role.permissions_changed
+    messages:
+      rolePermissionsChanged:
+        $ref: '#/components/messages/RolePermissionsChanged'
+
+  # ========================================
+  # AUTHENTICATION EVENTS (7 events)
+  # ========================================
+  iam.auth.login_success:
+    address: iam.auth.login_success
+    messages:
+      loginSuccess:
+        $ref: '#/components/messages/LoginSuccess'
+
+  iam.auth.login_failed:
+    address: iam.auth.login_failed
+    messages:
+      loginFailed:
+        $ref: '#/components/messages/LoginFailed'
+
+  iam.auth.logout:
+    address: iam.auth.logout
+    messages:
+      logout:
+        $ref: '#/components/messages/Logout'
+
+  iam.auth.token_refreshed:
+    address: iam.auth.token_refreshed
+    messages:
+      tokenRefreshed:
+        $ref: '#/components/messages/TokenRefreshed'
+
+  iam.auth.password_changed:
+    address: iam.auth.password_changed
+    messages:
+      passwordChanged:
+        $ref: '#/components/messages/PasswordChanged'
+
+  iam.auth.password_reset_requested:
+    address: iam.auth.password_reset_requested
+    messages:
+      passwordResetRequested:
+        $ref: '#/components/messages/PasswordResetRequested'
+
+  iam.auth.password_reset_completed:
+    address: iam.auth.password_reset_completed
+    messages:
+      passwordResetCompleted:
+        $ref: '#/components/messages/PasswordResetCompleted'
+
+operations:
+  publishUserCreated:
+    action: send
+    channel:
+      $ref: '#/channels/iam.user.created'
+    summary: Publish user creation events
+    description: Publishes events when users are created in the system
+
+  publishLoginSuccess:
+    action: send
+    channel:
+      $ref: '#/channels/iam.auth.login_success'
+    summary: Publish login success events
+    description: Publishes events when users successfully log in
+
+components:
+  messages:
+    # ========================================
+    # USER MESSAGES
+    # ========================================
+    UserCreated:
+      name: UserCreated
+      title: User Created Event
+      summary: Event published when a new user is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/UserCreatedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    UserUpdated:
+      name: UserUpdated
+      title: User Updated Event
+      summary: Event published when a user is updated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/UserUpdatedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    UserDeleted:
+      name: UserDeleted
+      title: User Deleted Event
+      summary: Event published when a user is deleted
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/UserDeletedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    UserManagerChanged:
+      name: UserManagerChanged
+      title: User Manager Changed Event
+      summary: Event published when user manager is changed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/UserManagerChangedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    UserStatusChanged:
+      name: UserStatusChanged
+      title: User Status Changed Event
+      summary: Event published when user status is changed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/UserStatusChangedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    # ========================================
+    # ROLE MESSAGES
+    # ========================================
+    RoleCreated:
+      name: RoleCreated
+      title: Role Created Event
+      summary: Event published when a new role is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RoleCreatedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    RoleUpdated:
+      name: RoleUpdated
+      title: Role Updated Event
+      summary: Event published when a role is updated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RoleUpdatedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    RoleDeleted:
+      name: RoleDeleted
+      title: Role Deleted Event
+      summary: Event published when a role is deleted
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RoleDeletedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    RoleHierarchyChanged:
+      name: RoleHierarchyChanged
+      title: Role Hierarchy Changed Event
+      summary: Event published when role hierarchy is changed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RoleHierarchyChangedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    RolePermissionsChanged:
+      name: RolePermissionsChanged
+      title: Role Permissions Changed Event
+      summary: Event published when role permissions are changed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RolePermissionsChangedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    # ========================================
+    # AUTHENTICATION MESSAGES
+    # ========================================
+    LoginSuccess:
+      name: LoginSuccess
+      title: Login Success Event
+      summary: Event published when user successfully logs in
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LoginSuccessPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    LoginFailed:
+      name: LoginFailed
+      title: Login Failed Event
+      summary: Event published when user login fails
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LoginFailedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    Logout:
+      name: Logout
+      title: Logout Event
+      summary: Event published when user logs out
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LogoutPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    TokenRefreshed:
+      name: TokenRefreshed
+      title: Token Refreshed Event
+      summary: Event published when token is refreshed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TokenRefreshedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    PasswordChanged:
+      name: PasswordChanged
+      title: Password Changed Event
+      summary: Event published when password is changed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PasswordChangedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    PasswordResetRequested:
+      name: PasswordResetRequested
+      title: Password Reset Requested Event
+      summary: Event published when password reset is requested
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PasswordResetRequestedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    PasswordResetCompleted:
+      name: PasswordResetCompleted
+      title: Password Reset Completed Event
+      summary: Event published when password reset is completed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PasswordResetCompletedPayload'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+  schemas:
+    # ========================================
+    # COMMON SCHEMAS
+    # ========================================
+    EventHeaders:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        correlation_id:
+          type: string
+          description: Request correlation ID for tracing
+          example: "req_abc123def456"
+        causation_id:
+          type: string
+          description: ID of the command that caused this event
+          example: "cmd_xyz789"
+        user_id:
+          type: string
+          description: ID of the user who triggered the event
+          example: "usr_a1b2c3d4e5f67890"
+        timestamp:
+          type: string
+          format: date-time
+          description: Event creation timestamp
+          example: "2024-01-15T10:30:00Z"
+        version:
+          type: string
+          description: Event schema version
+          example: "1.0"
+        event_id:
+          type: string
+          description: Unique event identifier
+          example: "evt_abc123def456"
+        aggregate_type:
+          type: string
+          description: Type of aggregate that generated the event
+          example: "user"
+        aggregate_id:
+          type: string
+          description: ID of the aggregate that generated the event
+          example: "usr_a1b2c3d4e5f67890"
+      required:
+        - tenant_id
+        - correlation_id
+        - timestamp
+        - version
+        - event_id
+        - aggregate_type
+        - aggregate_id
+
+    # ========================================
+    # USER PAYLOAD SCHEMAS
+    # ========================================
+    UserCreatedPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        name:
+          type: string
+          description: User full name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john.doe@company.com"
+        manager_id:
+          type: string
+          nullable: true
+          description: Manager's user ID
+          example: "usr_manager123"
+        external_id:
+          type: string
+          nullable: true
+          description: External system identifier
+          example: "ldap_user_456"
+        created_by:
+          type: string
+          description: ID of user who created this user
+          example: "usr_admin789"
+        source:
+          type: string
+          enum: [admin_created, self_registered, external_sync, bulk_import]
+          description: Source of user creation
+          example: "admin_created"
+      required:
+        - user_id
+        - name
+        - email
+        - created_by
+        - source
+
+    UserUpdatedPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        changes:
+          type: object
+          description: Fields that were changed
+          properties:
+            name:
+              type: object
+              properties:
+                old_value:
+                  type: string
+                  example: "John Doe"
+                new_value:
+                  type: string
+                  example: "John Smith"
+            email:
+              type: object
+              properties:
+                old_value:
+                  type: string
+                  example: "john.doe@company.com"
+                new_value:
+                  type: string
+                  example: "john.smith@company.com"
+        updated_by:
+          type: string
+          description: ID of user who made the update
+          example: "usr_admin789"
+      required:
+        - user_id
+        - changes
+        - updated_by
+
+    UserDeletedPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        name:
+          type: string
+          description: User full name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john.doe@company.com"
+        deleted_by:
+          type: string
+          description: ID of user who deleted this user
+          example: "usr_admin789"
+        reason:
+          type: string
+          nullable: true
+          description: Reason for deletion
+          example: "Employee left the company"
+      required:
+        - user_id
+        - name
+        - email
+        - deleted_by
+
+    UserManagerChangedPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        old_manager_id:
+          type: string
+          nullable: true
+          description: Previous manager's user ID
+          example: "usr_old_manager123"
+        new_manager_id:
+          type: string
+          nullable: true
+          description: New manager's user ID
+          example: "usr_new_manager456"
+        changed_by:
+          type: string
+          description: ID of user who made the change
+          example: "usr_admin789"
+      required:
+        - user_id
+        - changed_by
+
+    UserStatusChangedPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        old_status:
+          type: string
+          enum: [active, inactive, suspended, pending]
+          description: Previous status
+          example: "active"
+        new_status:
+          type: string
+          enum: [active, inactive, suspended, pending]
+          description: New status
+          example: "suspended"
+        changed_by:
+          type: string
+          description: ID of user who made the change
+          example: "usr_admin789"
+        reason:
+          type: string
+          nullable: true
+          description: Reason for status change
+          example: "Policy violation"
+      required:
+        - user_id
+        - old_status
+        - new_status
+        - changed_by
+
+    # ========================================
+    # ROLE PAYLOAD SCHEMAS
+    # ========================================
+    RoleCreatedPayload:
+      type: object
+      properties:
+        role_id:
+          type: string
+          description: Role record ID
+          example: "rol_a1b2c3d4e5f67890"
+        label:
+          type: string
+          description: Role display name
+          example: "Administrator"
+        api_name:
+          type: string
+          description: Role API identifier
+          example: "admin"
+        parent_id:
+          type: string
+          nullable: true
+          description: Parent role ID
+          example: "rol_parent123"
+        created_by:
+          type: string
+          description: ID of user who created this role
+          example: "usr_admin789"
+      required:
+        - role_id
+        - label
+        - api_name
+        - created_by
+
+    RoleUpdatedPayload:
+      type: object
+      properties:
+        role_id:
+          type: string
+          description: Role record ID
+          example: "rol_a1b2c3d4e5f67890"
+        changes:
+          type: object
+          description: Fields that were changed
+          properties:
+            label:
+              type: object
+              properties:
+                old_value:
+                  type: string
+                  example: "Administrator"
+                new_value:
+                  type: string
+                  example: "Super Administrator"
+        updated_by:
+          type: string
+          description: ID of user who made the update
+          example: "usr_admin789"
+      required:
+        - role_id
+        - changes
+        - updated_by
+
+    RoleDeletedPayload:
+      type: object
+      properties:
+        role_id:
+          type: string
+          description: Role record ID
+          example: "rol_a1b2c3d4e5f67890"
+        label:
+          type: string
+          description: Role display name
+          example: "Administrator"
+        api_name:
+          type: string
+          description: Role API identifier
+          example: "admin"
+        deleted_by:
+          type: string
+          description: ID of user who deleted this role
+          example: "usr_admin789"
+      required:
+        - role_id
+        - label
+        - api_name
+        - deleted_by
+
+    RoleHierarchyChangedPayload:
+      type: object
+      properties:
+        role_id:
+          type: string
+          description: Role record ID
+          example: "rol_a1b2c3d4e5f67890"
+        old_parent_id:
+          type: string
+          nullable: true
+          description: Previous parent role ID
+          example: "rol_old_parent123"
+        new_parent_id:
+          type: string
+          nullable: true
+          description: New parent role ID
+          example: "rol_new_parent456"
+        changed_by:
+          type: string
+          description: ID of user who made the change
+          example: "usr_admin789"
+      required:
+        - role_id
+        - changed_by
+
+    RolePermissionsChangedPayload:
+      type: object
+      properties:
+        role_id:
+          type: string
+          description: Role record ID
+          example: "rol_a1b2c3d4e5f67890"
+        permission_changes:
+          type: array
+          description: List of permission changes
+          items:
+            type: object
+            properties:
+              permission_type:
+                type: string
+                enum: [object_permission, field_permission]
+                example: "object_permission"
+              permission_id:
+                type: string
+                example: "perm_abc123"
+              action:
+                type: string
+                enum: [granted, revoked, updated]
+                example: "granted"
+        changed_by:
+          type: string
+          description: ID of user who made the change
+          example: "usr_admin789"
+      required:
+        - role_id
+        - permission_changes
+        - changed_by
+
+    # ========================================
+    # AUTHENTICATION PAYLOAD SCHEMAS
+    # ========================================
+    LoginSuccessPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        principal_id:
+          type: integer
+          description: Principal ID
+          example: 123
+        login:
+          type: string
+          description: Login identifier used
+          example: "john.doe@company.com"
+        ip_address:
+          type: string
+          format: ipv4
+          description: Client IP address
+          example: "192.168.1.100"
+        user_agent:
+          type: string
+          description: Client user agent
+          example: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        session_id:
+          type: string
+          description: Session identifier
+          example: "sess_abc123def456"
+        authentication_method:
+          type: string
+          enum: [password, oauth, api_key, sso]
+          description: Authentication method used
+          example: "password"
+      required:
+        - user_id
+        - principal_id
+        - login
+        - authentication_method
+
+    LoginFailedPayload:
+      type: object
+      properties:
+        login:
+          type: string
+          description: Login identifier attempted
+          example: "john.doe@company.com"
+        reason:
+          type: string
+          enum: [invalid_credentials, account_locked, account_disabled, rate_limited, user_not_found]
+          description: Reason for login failure
+          example: "invalid_credentials"
+        ip_address:
+          type: string
+          format: ipv4
+          description: Client IP address
+          example: "192.168.1.100"
+        user_agent:
+          type: string
+          description: Client user agent
+          example: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        attempt_count:
+          type: integer
+          description: Number of failed attempts
+          example: 3
+        user_id:
+          type: string
+          nullable: true
+          description: User ID if user was found
+          example: "usr_a1b2c3d4e5f67890"
+      required:
+        - login
+        - reason
+
+    LogoutPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        principal_id:
+          type: integer
+          description: Principal ID
+          example: 123
+        session_id:
+          type: string
+          description: Session identifier
+          example: "sess_abc123def456"
+        logout_type:
+          type: string
+          enum: [user_initiated, timeout, admin_forced, security_policy]
+          description: Type of logout
+          example: "user_initiated"
+        session_duration:
+          type: integer
+          description: Session duration in seconds
+          example: 3600
+      required:
+        - user_id
+        - principal_id
+        - session_id
+        - logout_type
+
+    TokenRefreshedPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        principal_id:
+          type: integer
+          description: Principal ID
+          example: 123
+        old_token_id:
+          type: string
+          description: Previous token ID
+          example: "tok_old123"
+        new_token_id:
+          type: string
+          description: New token ID
+          example: "tok_new456"
+        refresh_reason:
+          type: string
+          enum: [expired, manual_refresh, security_policy]
+          description: Reason for token refresh
+          example: "expired"
+      required:
+        - user_id
+        - principal_id
+        - new_token_id
+        - refresh_reason
+
+    PasswordChangedPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        principal_id:
+          type: integer
+          description: Principal ID
+          example: 123
+        changed_by:
+          type: string
+          description: ID of user who changed the password
+          example: "usr_a1b2c3d4e5f67890"
+        change_type:
+          type: string
+          enum: [self_change, admin_change, reset_completed]
+          description: Type of password change
+          example: "self_change"
+        ip_address:
+          type: string
+          format: ipv4
+          description: Client IP address
+          example: "192.168.1.100"
+      required:
+        - user_id
+        - principal_id
+        - changed_by
+        - change_type
+
+    PasswordResetRequestedPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john.doe@company.com"
+        reset_token:
+          type: string
+          description: Password reset token
+          example: "reset_abc123def456"
+        requested_by:
+          type: string
+          enum: [user, admin, system]
+          description: Who requested the reset
+          example: "user"
+        ip_address:
+          type: string
+          format: ipv4
+          description: Client IP address
+          example: "192.168.1.100"
+      required:
+        - user_id
+        - email
+        - reset_token
+        - requested_by
+
+    PasswordResetCompletedPayload:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: User record ID
+          example: "usr_a1b2c3d4e5f67890"
+        principal_id:
+          type: integer
+          description: Principal ID
+          example: 123
+        reset_token:
+          type: string
+          description: Password reset token used
+          example: "reset_abc123def456"
+        completed_by:
+          type: string
+          description: ID of user who completed the reset
+          example: "usr_a1b2c3d4e5f67890"
+        ip_address:
+          type: string
+          format: ipv4
+          description: Client IP address
+          example: "192.168.1.100"
+      required:
+        - user_id
+        - principal_id
+        - reset_token
+        - completed_by
