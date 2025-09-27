@@ -561,6 +561,246 @@ END;
 $$;
 
 -- ========================================
+-- TERRITORY EVENT GENERATION FUNCTIONS
+-- ========================================
+
+-- Generate territory.deleted event
+CREATE OR REPLACE FUNCTION iam.generate_territory_deleted_event()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_payload JSONB;
+BEGIN
+    -- Only trigger on soft delete
+    IF OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL THEN
+        v_payload := jsonb_build_object(
+            'tenant_id', NEW.tenant_id::text,
+            'territory_id', NEW.id::text,
+            'label', NEW.label,
+            'api_name', NEW.api_name,
+            'parent_id', CASE WHEN NEW.parent_id IS NOT NULL THEN NEW.parent_id::text ELSE NULL END,
+            'deleted_by', CASE WHEN NEW.deleted_by_principal_id IS NOT NULL THEN 
+                NEW.deleted_by_principal_id::text
+            ELSE NULL END,
+            'reason', 'Territory deactivated'
+        );
+        
+        PERFORM bootstrap.create_outbox_event(
+            'territory',
+            NEW.id::text,
+            'iam.territory.deleted',
+            v_payload
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+-- ========================================
+-- GROUP EVENT GENERATION FUNCTIONS
+-- ========================================
+
+-- Generate group.deleted event
+CREATE OR REPLACE FUNCTION cluster.generate_group_deleted_event()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_payload JSONB;
+BEGIN
+    -- Only trigger on soft delete
+    IF OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL THEN
+        v_payload := jsonb_build_object(
+            'tenant_id', NEW.tenant_id::text,
+            'group_id', NEW.record_id,
+            'label', NEW.label,
+            'api_name', NEW.api_name,
+            'group_type', NEW.group_type,
+            'related_entity_id', CASE WHEN NEW.related_entity_id IS NOT NULL THEN 
+                NEW.related_entity_id::text
+            ELSE NULL END,
+            'deleted_by', CASE WHEN NEW.deleted_by_principal_id IS NOT NULL THEN 
+                NEW.deleted_by_principal_id::text
+            ELSE NULL END,
+            'reason', 'Group deactivated'
+        );
+        
+        PERFORM bootstrap.create_outbox_event(
+            'group',
+            NEW.record_id,
+            'iam.group.deleted',
+            v_payload
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+-- ========================================
+-- IDENTITY EVENT GENERATION FUNCTIONS
+-- ========================================
+
+-- Generate identity.deleted event
+CREATE OR REPLACE FUNCTION iam.generate_identity_deleted_event()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_payload JSONB;
+BEGIN
+    -- Only trigger on soft delete
+    IF OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL THEN
+        v_payload := jsonb_build_object(
+            'tenant_id', NEW.tenant_id::text,
+            'identity_id', NEW.id::text,
+            'principal_id', NEW.principal_id::text,
+            'provider', NEW.provider,
+            'subject', NEW.subject,
+            'deleted_by', CASE WHEN NEW.deleted_by_principal_id IS NOT NULL THEN 
+                NEW.deleted_by_principal_id::text
+            ELSE NULL END,
+            'reason', 'Identity deactivated'
+        );
+        
+        PERFORM bootstrap.create_outbox_event(
+            'identity',
+            NEW.id::text,
+            'iam.identity.deleted',
+            v_payload
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+-- ========================================
+-- SECURITY OBJECT EVENT GENERATION FUNCTIONS
+-- ========================================
+
+-- Generate security.object.deleted event
+CREATE OR REPLACE FUNCTION security.generate_object_deleted_event()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_payload JSONB;
+BEGIN
+    -- Only trigger on soft delete
+    IF OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL THEN
+        v_payload := jsonb_build_object(
+            'tenant_id', NEW.tenant_id::text,
+            'object_id', NEW.id::text,
+            'label', NEW.label,
+            'api_name', NEW.api_name,
+            'object_type', NEW.object_type,
+            'deleted_by', CASE WHEN NEW.deleted_by_principal_id IS NOT NULL THEN 
+                NEW.deleted_by_principal_id::text
+            ELSE NULL END,
+            'reason', 'Security object deactivated'
+        );
+        
+        PERFORM bootstrap.create_outbox_event(
+            'security_object',
+            NEW.id::text,
+            'iam.security.object.deleted',
+            v_payload
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+-- ========================================
+-- SECURITY FIELD EVENT GENERATION FUNCTIONS
+-- ========================================
+
+-- Generate security.field.deleted event
+CREATE OR REPLACE FUNCTION security.generate_field_deleted_event()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_payload JSONB;
+    v_object_api_name TEXT;
+BEGIN
+    -- Only trigger on soft delete
+    IF OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL THEN
+        -- Get object API name
+        SELECT api_name INTO v_object_api_name
+        FROM security.object
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.object_id;
+        
+        v_payload := jsonb_build_object(
+            'tenant_id', NEW.tenant_id::text,
+            'field_id', NEW.id::text,
+            'object_id', NEW.object_id::text,
+            'object_api_name', v_object_api_name,
+            'label', NEW.label,
+            'api_name', NEW.api_name,
+            'field_type', NEW.field_type,
+            'deleted_by', CASE WHEN NEW.deleted_by_principal_id IS NOT NULL THEN 
+                NEW.deleted_by_principal_id::text
+            ELSE NULL END,
+            'reason', 'Security field deactivated'
+        );
+        
+        PERFORM bootstrap.create_outbox_event(
+            'security_field',
+            NEW.id::text,
+            'iam.security.field.deleted',
+            v_payload
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+-- ========================================
+-- PERMISSION SET DELETION EVENT GENERATION FUNCTIONS
+-- ========================================
+
+-- Generate permission_set.deleted event
+CREATE OR REPLACE FUNCTION security.generate_permission_set_deleted_event()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_payload JSONB;
+BEGIN
+    -- Only trigger on soft delete
+    IF OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL THEN
+        v_payload := jsonb_build_object(
+            'tenant_id', NEW.tenant_id::text,
+            'permission_set_id', NEW.id::text,
+            'api_name', NEW.api_name,
+            'group_id', CASE WHEN NEW.group_id IS NOT NULL THEN 
+                (SELECT record_id FROM cluster.group WHERE tenant_id = NEW.tenant_id AND id = NEW.group_id)
+            ELSE NULL END,
+            'deleted_by', CASE WHEN NEW.deleted_by_principal_id IS NOT NULL THEN 
+                NEW.deleted_by_principal_id::text
+            ELSE NULL END,
+            'reason', 'Permission set deactivated'
+        );
+        
+        PERFORM bootstrap.create_outbox_event(
+            'permission_set',
+            NEW.id::text,
+            'iam.permission_set.deleted',
+            v_payload
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+-- ========================================
 -- ATTACH EVENT TRIGGERS
 -- ========================================
 
@@ -622,6 +862,42 @@ CREATE TRIGGER trg_permission_set_unassigned_event
     AFTER UPDATE ON security.permission_set
     FOR EACH ROW
 EXECUTE FUNCTION security.generate_permission_set_unassigned_event();
+
+-- Territory event triggers
+CREATE TRIGGER trg_territory_deleted_event
+    AFTER UPDATE ON iam.territory
+    FOR EACH ROW
+EXECUTE FUNCTION iam.generate_territory_deleted_event();
+
+-- Group event triggers
+CREATE TRIGGER trg_group_deleted_event
+    AFTER UPDATE ON cluster.group
+    FOR EACH ROW
+EXECUTE FUNCTION cluster.generate_group_deleted_event();
+
+-- Identity event triggers
+CREATE TRIGGER trg_identity_deleted_event
+    AFTER UPDATE ON iam.identity
+    FOR EACH ROW
+EXECUTE FUNCTION iam.generate_identity_deleted_event();
+
+-- Security object event triggers
+CREATE TRIGGER trg_security_object_deleted_event
+    AFTER UPDATE ON security.object
+    FOR EACH ROW
+EXECUTE FUNCTION security.generate_object_deleted_event();
+
+-- Security field event triggers
+CREATE TRIGGER trg_security_field_deleted_event
+    AFTER UPDATE ON security.field
+    FOR EACH ROW
+EXECUTE FUNCTION security.generate_field_deleted_event();
+
+-- Permission set deletion event triggers
+CREATE TRIGGER trg_permission_set_deleted_event
+    AFTER UPDATE ON security.permission_set
+    FOR EACH ROW
+EXECUTE FUNCTION security.generate_permission_set_deleted_event();
 
 -- ========================================
 -- EVENT MONITORING FUNCTIONS

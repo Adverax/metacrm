@@ -1,0 +1,282 @@
+syntax = "proto3";
+
+package iam.permissions.sync.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/adverax/metacrm/contracts";
+
+// ========================================
+// PERMISSION SYNC SERVICE
+// ========================================
+
+// Service for external services to sync user permissions via lazy loading
+// This service is designed to be called by other microservices when they receive
+// IAM events (like group membership changes) and need to update their local permission cache
+service PermissionSyncService {
+  // Get complete user permissions snapshot for caching
+  rpc GetUserPermissionsSnapshot(GetUserPermissionsSnapshotRequest) returns (GetUserPermissionsSnapshotResponse);
+  
+  // Get user permissions changes since last sync
+  rpc GetUserPermissionsChanges(GetUserPermissionsChangesRequest) returns (GetUserPermissionsChangesResponse);
+  
+  // Bulk get permissions for multiple users (for batch processing)
+  rpc GetBulkUserPermissions(GetBulkUserPermissionsRequest) returns (GetBulkUserPermissionsResponse);
+  
+  // Get permissions for users affected by group membership changes
+  rpc GetGroupMembershipPermissions(GetGroupMembershipPermissionsRequest) returns (GetGroupMembershipPermissionsResponse);
+  
+  // Check if user permissions have changed since timestamp
+  rpc CheckUserPermissionsChanged(CheckUserPermissionsChangedRequest) returns (CheckUserPermissionsChangedResponse);
+  
+  // Sync permissions for users in a specific group
+  rpc SyncGroupPermissions(SyncGroupPermissionsRequest) returns (SyncGroupPermissionsResponse);
+  
+  // Get permission sync statistics for monitoring
+  rpc GetPermissionSyncStats(GetPermissionSyncStatsRequest) returns (GetPermissionSyncStatsResponse);
+}
+
+// ========================================
+// REQUEST MESSAGES
+// ========================================
+
+message GetUserPermissionsSnapshotRequest {
+  string tenant_id = 1;                    // Tenant identifier (UUID)
+  string user_id = 2;                      // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  repeated string object_api_names = 3;    // Objects to include (empty = all objects)
+  bool include_group_memberships = 4;      // Include group membership info
+  bool include_permission_sources = 5;     // Include detailed permission sources
+  optional int32 ttl_seconds = 6;          // Cache TTL in seconds (default: 3600)
+}
+
+message GetUserPermissionsChangesRequest {
+  string tenant_id = 1;                    // Tenant identifier (UUID)
+  string user_id = 2;                      // User record ID
+  google.protobuf.Timestamp since = 3;     // Get changes since this timestamp
+  repeated string object_api_names = 4;    // Objects to check (empty = all objects)
+  bool include_group_memberships = 5;      // Include group membership changes
+}
+
+message GetBulkUserPermissionsRequest {
+  string tenant_id = 1;                    // Tenant identifier (UUID)
+  repeated string user_ids = 2;            // List of user IDs (max 100)
+  repeated string object_api_names = 3;    // Objects to include (empty = all objects)
+  bool include_group_memberships = 4;      // Include group membership info
+  bool include_permission_sources = 5;     // Include detailed permission sources
+  optional int32 ttl_seconds = 6;          // Cache TTL in seconds (default: 3600)
+}
+
+message GetGroupMembershipPermissionsRequest {
+  string tenant_id = 1;                    // Tenant identifier (UUID)
+  string group_record_id = 2;              // Group record ID (e.g., "grp_a1b2c3d4e5f67890")
+  repeated string object_api_names = 3;    // Objects to include (empty = all objects)
+  bool include_all_members = 4;            // Include permissions for all group members
+  bool include_permission_sources = 5;     // Include detailed permission sources
+  optional int32 ttl_seconds = 6;          // Cache TTL in seconds (default: 3600)
+}
+
+message CheckUserPermissionsChangedRequest {
+  string tenant_id = 1;                    // Tenant identifier (UUID)
+  string user_id = 2;                      // User record ID
+  google.protobuf.Timestamp since = 3;     // Check changes since this timestamp
+  repeated string object_api_names = 4;    // Objects to check (empty = all objects)
+}
+
+message SyncGroupPermissionsRequest {
+  string tenant_id = 1;                    // Tenant identifier (UUID)
+  string group_record_id = 2;              // Group record ID
+  repeated string user_ids = 3;            // Specific users to sync (empty = all group members)
+  repeated string object_api_names = 4;    // Objects to sync (empty = all objects)
+  bool force_refresh = 5;                  // Force refresh even if cache is valid
+}
+
+message GetPermissionSyncStatsRequest {
+  optional string tenant_id = 1;           // Tenant identifier (UUID) - optional for system-wide stats
+  google.protobuf.Timestamp since = 2;     // Get stats since this timestamp (default: 1 day ago)
+}
+
+// ========================================
+// RESPONSE MESSAGES
+// ========================================
+
+message GetUserPermissionsSnapshotResponse {
+  UserPermissionsSnapshot snapshot = 1;
+  CacheInfo cache_info = 2;
+  google.protobuf.Timestamp generated_at = 3;
+}
+
+message GetUserPermissionsChangesResponse {
+  repeated PermissionChange changes = 1;
+  int32 total_changes = 2;
+  google.protobuf.Timestamp last_change = 3;
+  CacheInfo cache_info = 4;
+}
+
+message GetBulkUserPermissionsResponse {
+  repeated UserPermissionsSnapshot snapshots = 1;
+  int32 total_users = 2;
+  int32 failed_users = 3;
+  repeated string failed_user_ids = 4;
+  CacheInfo cache_info = 5;
+}
+
+message GetGroupMembershipPermissionsResponse {
+  repeated UserPermissionsSnapshot member_permissions = 1;
+  GroupInfo group_info = 2;
+  int32 total_members = 3;
+  CacheInfo cache_info = 4;
+}
+
+message CheckUserPermissionsChangedResponse {
+  bool has_changes = 1;
+  google.protobuf.Timestamp last_change = 2;
+  repeated string changed_objects = 3;
+  int32 total_changes = 4;
+}
+
+message SyncGroupPermissionsResponse {
+  int32 users_synced = 1;
+  int32 permissions_updated = 2;
+  google.protobuf.Timestamp synced_at = 3;
+  repeated string failed_user_ids = 4;
+}
+
+message GetPermissionSyncStatsResponse {
+  PermissionSyncStats stats = 1;
+}
+
+// ========================================
+// DATA MESSAGES
+// ========================================
+
+message UserPermissionsSnapshot {
+  string user_id = 1;                      // User record ID
+  string tenant_id = 2;                    // Tenant identifier
+  repeated ObjectPermission permissions = 3; // Object permissions
+  repeated FieldPermission field_permissions = 4; // Field permissions
+  repeated GroupMembership group_memberships = 5; // Group memberships
+  repeated PermissionSource permission_sources = 6; // Detailed permission sources
+  google.protobuf.Timestamp snapshot_at = 7; // When snapshot was taken
+  string snapshot_version = 8;             // Version of the snapshot
+}
+
+message PermissionChange {
+  string change_id = 1;                    // Unique change identifier
+  string user_id = 2;                      // User affected by change
+  ChangeType change_type = 3;              // Type of change
+  string object_api_name = 4;              // Object affected (if applicable)
+  string group_id = 5;                     // Group affected (if applicable)
+  PermissionBitmask old_permissions = 6;   // Previous permissions
+  PermissionBitmask new_permissions = 7;   // New permissions
+  google.protobuf.Timestamp changed_at = 8; // When change occurred
+  string change_reason = 9;                // Reason for change
+  string event_id = 10;                    // Related event ID
+}
+
+message GroupInfo {
+  string group_record_id = 1;              // Group record ID
+  string group_label = 2;                  // Group display name
+  string group_api_name = 3;               // Group API name
+  GroupType group_type = 4;                // Type of group
+  int32 member_count = 5;                  // Number of members
+  google.protobuf.Timestamp last_modified = 6; // Last modification time
+}
+
+message ObjectPermission {
+  string object_api_name = 1;              // Object API name (e.g., "user", "order")
+  int64 object_id = 2;                     // Internal object ID
+  PermissionBitmask permissions = 3;       // Combined permission bitmask
+  google.protobuf.Timestamp computed_at = 4; // When permissions were computed
+}
+
+message FieldPermission {
+  string object_api_name = 1;              // Object API name (e.g., "user", "order")
+  string field_api_name = 2;               // Field API name (e.g., "email", "salary")
+  int64 object_id = 3;                     // Internal object ID
+  int64 field_id = 4;                      // Internal field ID
+  PermissionBitmask permissions = 5;       // Combined permission bitmask
+  google.protobuf.Timestamp computed_at = 6; // When permissions were computed
+}
+
+message GroupMembership {
+  string group_record_id = 1;              // Group record ID
+  string group_label = 2;                  // Group display name
+  string group_api_name = 3;               // Group API name
+  GroupType group_type = 4;                // Type of group
+  MembershipType membership_type = 5;      // How user became a member
+  string related_entity_id = 6;            // Related entity (role or territory)
+  google.protobuf.Timestamp joined_at = 7; // When user joined the group
+  google.protobuf.Timestamp expires_at = 8; // When membership expires
+}
+
+message PermissionSource {
+  SourceType source_type = 1;              // Type of source (group, role, direct)
+  string source_id = 2;                    // ID of the source
+  string source_name = 3;                  // Name of the source
+  PermissionBitmask permissions = 4;       // Permissions from this source
+  int32 priority = 5;                      // Priority of this source
+  google.protobuf.Timestamp granted_at = 6; // When permission was granted
+}
+
+message PermissionBitmask {
+  int32 value = 1;                         // Raw bitmask value
+  bool can_read = 2;                       // READ permission (bit 0, value 1)
+  bool can_update = 3;                     // UPDATE permission (bit 1, value 2)
+  bool can_create = 4;                     // CREATE permission (bit 2, value 4)
+  bool can_delete = 5;                     // DELETE permission (bit 3, value 8)
+  repeated string permission_names = 6;    // Human-readable permission names
+}
+
+message CacheInfo {
+  bool from_cache = 1;                     // Whether data came from cache
+  google.protobuf.Timestamp cached_at = 2; // When data was cached
+  google.protobuf.Timestamp expires_at = 3; // When cache expires
+  int32 ttl_seconds = 4;                   // Cache TTL in seconds
+}
+
+message PermissionSyncStats {
+  int32 total_events = 1;                  // Total events processed
+  int32 sync_events = 2;                   // Permission sync events
+  int32 failed_events = 3;                 // Failed events
+  google.protobuf.Duration avg_processing_time = 4; // Average processing time
+  google.protobuf.Timestamp period_start = 5; // Stats period start
+  google.protobuf.Timestamp period_end = 6; // Stats period end
+}
+
+// ========================================
+// ENUMS
+// ========================================
+
+enum ChangeType {
+  CHANGE_TYPE_UNSPECIFIED = 0;
+  CHANGE_TYPE_GROUP_JOINED = 1;            // User joined a group
+  CHANGE_TYPE_GROUP_LEFT = 2;              // User left a group
+  CHANGE_TYPE_PERMISSION_GRANTED = 3;      // Permission was granted
+  CHANGE_TYPE_PERMISSION_REVOKED = 4;      // Permission was revoked
+  CHANGE_TYPE_ROLE_ASSIGNED = 5;           // Role was assigned
+  CHANGE_TYPE_ROLE_REMOVED = 6;            // Role was removed
+}
+
+enum GroupType {
+  GROUP_TYPE_UNSPECIFIED = 0;
+  GROUP_TYPE_ROLE_BASED = 1;               // Role-based group
+  GROUP_TYPE_TERRITORY_BASED = 2;          // Territory-based group
+  GROUP_TYPE_MANUAL = 3;                   // Manually managed group
+  GROUP_TYPE_DYNAMIC = 4;                  // Dynamically managed group
+}
+
+enum MembershipType {
+  MEMBERSHIP_TYPE_UNSPECIFIED = 0;
+  MEMBERSHIP_TYPE_DIRECT = 1;              // Direct membership
+  MEMBERSHIP_TYPE_INHERITED = 2;           // Inherited through role
+  MEMBERSHIP_TYPE_AUTOMATIC = 3;           // Automatic through group type
+}
+
+enum SourceType {
+  SOURCE_TYPE_UNSPECIFIED = 0;
+  SOURCE_TYPE_GROUP = 1;                   // Permission from group membership
+  SOURCE_TYPE_ROLE = 2;                    // Permission from role
+  SOURCE_TYPE_DIRECT = 3;                  // Direct permission assignment
+  SOURCE_TYPE_TERRITORY = 4;               // Permission from territory
+}
