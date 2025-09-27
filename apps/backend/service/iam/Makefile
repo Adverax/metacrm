@@ -7,11 +7,11 @@ export GH_PAT
 
 .PHONY: migrate_up
 migrate_up: ## Run the database migrations
-	migrate -path ./migrations -database postgresql://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable up
+	migrate -path ./database/migrations -database postgresql://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable up
 
 .PHONY: migrate_down
 migrate_down: ## Rollback the last database migration
-	migrate -path ./migrations -database postgresql://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable down
+	migrate -path ./database/migrations -database postgresql://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable down
 
 .PHONY: migrate_create
 migrate_create: ## Create a new database migration

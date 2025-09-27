@@ -8,7 +8,7 @@ CREATE TYPE bootstrap.outbox_status AS ENUM ('pending','processing','done','dead
 
 -- Outbox table for reliable event publishing
 -- Implements the Outbox pattern to ensure eventual consistency between database transactions and external systems
--- 
+--
 -- Example usage:
 -- INSERT INTO bootstrap.outbox (aggregate_type, aggregate_id, event_type, payload, headers)
 -- VALUES ('user', '123', 'user_created', '{"name": "John Doe", "email": "john@example.com"}', '{"tenant_id": "uuid-here"}');
@@ -22,49 +22,49 @@ CREATE TABLE bootstrap.outbox
 (
     -- Unique identifier for the outbox record
     id              bigserial PRIMARY KEY,
-    
+
     -- Type of aggregate that generated the event (e.g., 'user', 'order', 'product')
     -- Used for routing and filtering events
     aggregate_type  text                    NOT NULL,
-    
+
     -- ID of the specific aggregate instance that generated the event
     -- Example: '123' for user with ID 123, 'ord-abc123' for order with ID ord-abc123
     aggregate_id    text                    NOT NULL,
-    
+
     -- Type of event that occurred (e.g., 'user_created', 'order_placed', 'payment_processed')
     -- Used by consumers to understand what happened
     event_type      text                    NOT NULL,
-    
+
     -- Event payload containing the actual data
     -- Example: {"name": "John Doe", "email": "john@example.com", "role": "admin"}
     payload         jsonb                   NOT NULL,
-    
+
     -- Additional metadata and headers
     -- Example: {"tenant_id": "uuid-here", "correlation_id": "req-123", "user_id": "456"}
     headers         jsonb                   NOT NULL DEFAULT '{}'::jsonb,
-    
+
     -- Current processing status of the event
     status          bootstrap.outbox_status NOT NULL DEFAULT 'pending'::bootstrap.outbox_status,
-    
+
     -- Number of processing attempts made
     -- Incremented on each retry, used for exponential backoff
     attempt         int                     NOT NULL DEFAULT 0,
-    
+
     -- When to attempt processing next (for retry logic)
     -- Example: now() + (attempt * 2) minutes for exponential backoff
     next_attempt_at timestamptz             NOT NULL DEFAULT now(),
-    
+
     -- Identifier of the worker/process currently processing this event
     -- Used to prevent duplicate processing and for monitoring
     locked_by       text,
-    
+
     -- When the event was locked for processing
     -- Used to detect stale locks and implement timeout logic
     locked_at       timestamptz,
-    
+
     -- When the event was originally created
     created_at      timestamptz             NOT NULL DEFAULT now(),
-    
+
     -- When the event was successfully published to external system
     -- NULL until event is successfully processed
     published_at    timestamptz
@@ -88,13 +88,13 @@ CREATE INDEX ON bootstrap.outbox (created_at);
 -- BEGIN;
 --   -- Business logic here
 --   INSERT INTO iam.user (name, email) VALUES ('John Doe', 'john@example.com');
---   
+--
 --   -- Create outbox event
 --   INSERT INTO bootstrap.outbox (aggregate_type, aggregate_id, event_type, payload, headers)
 --   VALUES (
---     'user', 
---     '123', 
---     'user_created', 
+--     'user',
+--     '123',
+--     'user_created',
 --     '{"name": "John Doe", "email": "john@example.com", "role": "user"}',
 --     '{"tenant_id": "550e8400-e29b-41d4-a716-446655440000", "correlation_id": "req-abc123"}'
 --   );
@@ -102,31 +102,31 @@ CREATE INDEX ON bootstrap.outbox (created_at);
 --
 -- 2. Processing events (outbox worker):
 -- -- Get next batch of pending events
--- SELECT * FROM bootstrap.outbox 
--- WHERE status = 'pending' 
---   AND next_attempt_at <= now() 
--- ORDER BY created_at 
+-- SELECT * FROM bootstrap.outbox
+-- WHERE status = 'pending'
+--   AND next_attempt_at <= now()
+-- ORDER BY created_at
 -- LIMIT 100;
 --
 -- -- Mark event as processing
--- UPDATE bootstrap.outbox 
--- SET status = 'processing', 
---     locked_by = 'worker-1', 
+-- UPDATE bootstrap.outbox
+-- SET status = 'processing',
+--     locked_by = 'worker-1',
 --     locked_at = now(),
 --     attempt = attempt + 1
 -- WHERE id = 123;
 --
 -- -- After successful processing
--- UPDATE bootstrap.outbox 
--- SET status = 'done', 
+-- UPDATE bootstrap.outbox
+-- SET status = 'done',
 --     published_at = now(),
 --     locked_by = NULL,
 --     locked_at = NULL
 -- WHERE id = 123;
 --
 -- -- After failed processing (with retry logic)
--- UPDATE bootstrap.outbox 
--- SET status = CASE 
+-- UPDATE bootstrap.outbox
+-- SET status = CASE
 --     WHEN attempt >= 5 THEN 'dead'
 --     ELSE 'pending'
 --   END,
@@ -140,13 +140,13 @@ CREATE INDEX ON bootstrap.outbox (created_at);
 -- SELECT status, COUNT(*) FROM bootstrap.outbox GROUP BY status;
 --
 -- -- Find stuck events (processing for too long)
--- SELECT * FROM bootstrap.outbox 
--- WHERE status = 'processing' 
+-- SELECT * FROM bootstrap.outbox
+-- WHERE status = 'processing'
 --   AND locked_at < now() - interval '10 minutes';
 --
 -- -- Find events ready for retry
--- SELECT COUNT(*) FROM bootstrap.outbox 
--- WHERE status = 'pending' 
+-- SELECT COUNT(*) FROM bootstrap.outbox
+-- WHERE status = 'pending'
 --   AND next_attempt_at <= now();
 
 
@@ -156,12 +156,12 @@ CREATE INDEX ON bootstrap.outbox (created_at);
 
 -- Generate unique primary key with given prefix (3 characters) + 16 hex characters
 -- Creates human-readable IDs with predictable prefixes for different entity types
--- 
+--
 -- Parameters:
 --   v_prefix: 3-character prefix (e.g., 'usr', 'ord', 'prd')
--- 
+--
 -- Returns: 19-character string (3 prefix + 16 hex)
--- 
+--
 -- Examples:
 --   SELECT bootstrap.generate_pk('usr'); -- Returns: 'usra1b2c3d4e5f67890'
 --   SELECT bootstrap.generate_pk('ord'); -- Returns: 'ordf9e8d7c6b5a43210'
@@ -178,20 +178,20 @@ BEGIN
     IF v_prefix IS NULL THEN
         RAISE EXCEPTION 'Prefix cannot be NULL';
     END IF;
-    
+
     IF length(trim(v_prefix)) = 0 THEN
         RAISE EXCEPTION 'Prefix cannot be empty';
     END IF;
-    
+
     IF length(trim(v_prefix)) > 3 THEN
         RAISE EXCEPTION 'Prefix cannot be longer than 3 characters';
     END IF;
-    
+
     -- Check for valid characters (only letters and numbers)
     IF v_prefix !~ '^[a-zA-Z0-9]+$' THEN
         RAISE EXCEPTION 'Prefix can only contain alphanumeric characters';
     END IF;
-    
+
     -- Generate ID
     RETURN v_prefix || encode(gen_random_bytes(8), 'hex');
 END;
@@ -199,9 +199,9 @@ $$;
 
 -- Get current tenant ID from session context
 -- Retrieves the tenant ID that was set for the current database session
--- 
+--
 -- Returns: UUID of current tenant or NULL if not set
--- 
+--
 -- Examples:
 --   SELECT bootstrap.current_tenant_id(); -- Returns: '550e8400-e29b-41d4-a716-446655440000'
 --   SELECT bootstrap.current_tenant_id(); -- Returns: NULL (if not set)
@@ -223,12 +223,12 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
         RETURN NULL;
     END;
-    
+
     -- Check for empty value
     IF v_tenant_id_text IS NULL OR trim(v_tenant_id_text) = '' THEN
         RETURN NULL;
     END IF;
-    
+
     -- Validate UUID format
     BEGIN
         v_tenant_id := v_tenant_id_text::uuid;
@@ -242,9 +242,9 @@ $$;
 -- Get current principal ID from session context
 -- Retrieves the principal (user/system) ID that was set for the current database session
 -- Used for audit trails and tracking who performed database operations
--- 
+--
 -- Returns: BIGINT ID of current principal or NULL if not set
--- 
+--
 -- Examples:
 --   SELECT bootstrap.current_principal_id(); -- Returns: 123
 --   SELECT bootstrap.current_principal_id(); -- Returns: NULL (if not set)
@@ -267,24 +267,24 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
         RETURN NULL;
     END;
-    
+
     -- Check for empty value
     IF v_principal_id_text IS NULL OR trim(v_principal_id_text) = '' THEN
         RETURN NULL;
     END IF;
-    
+
     -- Validate BIGINT format
     BEGIN
         v_principal_id := v_principal_id_text::bigint;
     EXCEPTION WHEN invalid_text_representation THEN
         RAISE EXCEPTION 'Invalid principal ID format: %', v_principal_id_text;
     END;
-    
+
     -- Check for positive values
     IF v_principal_id <= 0 THEN
         RAISE EXCEPTION 'Principal ID must be positive: %', v_principal_id;
     END IF;
-    
+
     RETURN v_principal_id;
 END;
 $$;
@@ -292,13 +292,13 @@ $$;
 -- Set session context for tenant and principal
 -- Establishes the tenant and principal context for the current database session
 -- This context is used by current_tenant_id() and current_principal_id() functions
--- 
+--
 -- Parameters:
 --   p_tenant: UUID of the tenant to set as current
 --   p_principal: BIGINT ID of the principal (user/system) to set as current
--- 
+--
 -- Returns: void
--- 
+--
 -- Examples:
 --   SELECT bootstrap.set_ctx('550e8400-e29b-41d4-a716-446655440000', 123);
 --   -- Now bootstrap.current_tenant_id() returns the tenant UUID
@@ -318,16 +318,16 @@ BEGIN
     IF p_tenant IS NULL THEN
         RAISE EXCEPTION 'Tenant ID cannot be NULL';
     END IF;
-    
+
     -- Validate principal_id
     IF p_principal IS NULL THEN
         RAISE EXCEPTION 'Principal ID cannot be NULL';
     END IF;
-    
+
     IF p_principal <= 0 THEN
         RAISE EXCEPTION 'Principal ID must be positive: %', p_principal;
     END IF;
-    
+
     -- Set session context
     PERFORM set_config('app.tenant_id', p_tenant::text, true);
     PERFORM set_config('app.principal_id', p_principal::text, true);
@@ -337,12 +337,12 @@ $$;
 -- Convert text to database-safe slug
 -- Transforms any text into a valid identifier for database objects (tables, columns, etc.)
 -- Removes special characters and replaces dots with underscores
--- 
+--
 -- Parameters:
 --   p_alias: Input text to convert to slug
--- 
+--
 -- Returns: Clean slug with only alphanumeric characters and underscores
--- 
+--
 -- Examples:
 --   SELECT bootstrap.slug_from('user.profile'); -- Returns: 'user_profile'
 --   SELECT bootstrap.slug_from('my-table@2024'); -- Returns: 'mytable2024'
@@ -354,7 +354,7 @@ $$;
 --
 -- Note: This function is IMMUTABLE and STABLE, safe for use in indexes and constraints
 CREATE OR REPLACE FUNCTION bootstrap.slug_from(p_alias TEXT)
-    RETURNS TEXT IMMUTABLE LANGUAGE plpgsql STABLE AS
+    RETURNS TEXT IMMUTABLE LANGUAGE plpgsql AS
 $$
 DECLARE
     v_slug TEXT;
@@ -363,24 +363,24 @@ BEGIN
     IF p_alias IS NULL THEN
         RAISE EXCEPTION 'Input alias cannot be NULL';
     END IF;
-    
+
     IF trim(p_alias) = '' THEN
         RAISE EXCEPTION 'Input alias cannot be empty';
     END IF;
-    
+
     -- Process slug
     v_slug := regexp_replace(replace(p_alias, '.', '_'), '[^a-zA-Z0-9_]', '', 'g');
-    
+
     -- Check result
     IF v_slug IS NULL OR trim(v_slug) = '' THEN
         RAISE EXCEPTION 'Resulting slug is empty after processing: %', p_alias;
     END IF;
-    
+
     -- Check maximum length (for PostgreSQL identifiers)
     IF length(v_slug) > 63 THEN
         RAISE EXCEPTION 'Resulting slug is too long (max 63 characters): %', v_slug;
     END IF;
-    
+
     RETURN v_slug;
 END;
 $$;
@@ -392,9 +392,9 @@ $$;
 -- Simple timestamp update trigger function
 -- Updates the updated_at field with current timestamp on every UPDATE operation
 -- Used for basic audit trails without user tracking
--- 
+--
 -- Returns: NEW record with updated timestamp
--- 
+--
 -- Usage:
 --   CREATE TRIGGER trg_table_update_time
 --   BEFORE UPDATE ON my_table
@@ -419,9 +419,9 @@ $function$;
 -- Advanced update trigger function with user tracking
 -- Updates both updated_at timestamp and updated_by_principal_id fields
 -- Provides full audit trail including who made the change
--- 
+--
 -- Returns: NEW record with updated timestamp and principal ID
--- 
+--
 -- Usage:
 --   CREATE TRIGGER trg_table_update
 --   BEFORE UPDATE ON my_table
@@ -457,9 +457,9 @@ $function$;
 -- Complete audit trigger function with soft delete support
 -- Handles both regular updates and soft deletes with full audit trail
 -- Tracks who updated records and who deleted them (soft delete)
--- 
+--
 -- Returns: NEW record with appropriate audit fields set
--- 
+--
 -- Usage:
 --   CREATE TRIGGER trg_table_update_with_delete
 --   BEFORE UPDATE ON my_table
@@ -475,9 +475,9 @@ $function$;
 --
 -- Behavior:
 --   - On regular update: sets updated_at and updated_by_principal_id
---   - On soft delete (deleted_at changes from NULL to timestamp): 
+--   - On soft delete (deleted_at changes from NULL to timestamp):
 --     sets deleted_by_principal_id to current principal
---   - On restore (deleted_at changes from timestamp to NULL): 
+--   - On restore (deleted_at changes from timestamp to NULL):
 --     sets updated_at and updated_by_principal_id
 --
 -- Example:
@@ -485,7 +485,7 @@ $function$;
 --   -- Regular update
 --   UPDATE my_table SET name = 'New Name' WHERE id = 1;
 --   -- updated_at = now(), updated_by_principal_id = 123
---   
+--
 --   -- Soft delete
 --   UPDATE my_table SET deleted_at = now() WHERE id = 1;
 --   -- deleted_by_principal_id = 123
@@ -521,13 +521,13 @@ $function$;
 -- Automatically attach appropriate audit triggers to a table
 -- Analyzes table structure and creates the most suitable audit trigger
 -- Supports three levels of audit functionality based on available columns
--- 
+--
 -- Parameters:
 --   p_schema_name: Schema name containing the table
 --   p_table_name: Table name to attach triggers to
--- 
+--
 -- Returns: void
--- 
+--
 -- Trigger Selection Logic:
 --   1. If table has updated_at + updated_by_principal_id + deleted_at + deleted_by_principal_id:
 --      → Uses updated_deleted_setter (full audit with soft delete)
@@ -537,7 +537,7 @@ $function$;
 --      → Uses updated_at_setter (basic timestamp audit)
 --   4. If table has none of these columns:
 --      → No triggers attached
--- 
+--
 -- Examples:
 --   SELECT bootstrap.attach_audit_triggers('iam', 'user');
 --   SELECT bootstrap.attach_audit_triggers('security', 'permission');
@@ -622,22 +622,22 @@ $function$;
 -- Create hash partitions for a table
 -- Automatically creates the specified number of hash partitions for a table
 -- Uses HASH partitioning with MODULUS/REMAINDER for even distribution
--- 
+--
 -- Parameters:
 --   p_schema_name: Schema name containing the table
 --   p_table_name: Table name to partition
 --   p_count: Number of partitions to create
--- 
+--
 -- Returns: void
--- 
+--
 -- Requirements:
 --   - Table must already exist and be defined as PARTITION BY HASH
 --   - Table must have a partitioning column (usually tenant_id)
--- 
+--
 -- Examples:
 --   -- Create 16 partitions for iam.user table
 --   SELECT bootstrap.make_partitions('iam', 'user', 16);
---   
+--
 --   -- Create 8 partitions for security.object table
 --   SELECT bootstrap.make_partitions('security', 'object', 8);
 --
@@ -649,7 +649,7 @@ $function$;
 --     name TEXT NOT NULL,
 --     PRIMARY KEY (id, tenant_id)
 --   ) PARTITION BY HASH (tenant_id);
---   
+--
 --   -- 2. Create partitions
 --   SELECT bootstrap.make_partitions('iam', 'user', 16);
 --
@@ -673,56 +673,56 @@ BEGIN
     IF p_schema_name IS NULL OR trim(p_schema_name) = '' THEN
         RAISE EXCEPTION 'Schema name cannot be NULL or empty';
     END IF;
-    
+
     IF p_table_name IS NULL OR trim(p_table_name) = '' THEN
         RAISE EXCEPTION 'Table name cannot be NULL or empty';
     END IF;
-    
+
     IF p_count IS NULL OR p_count <= 0 THEN
         RAISE EXCEPTION 'Partition count must be positive: %', p_count;
     END IF;
-    
+
     IF p_count > 1000 THEN
         RAISE EXCEPTION 'Partition count too large (max 1000): %', p_count;
     END IF;
-    
+
     -- Check if schema exists
     SELECT EXISTS(
-        SELECT 1 FROM information_schema.schemata 
+        SELECT 1 FROM information_schema.schemata
         WHERE schema_name = p_schema_name
     ) INTO v_schema_exists;
-    
+
     IF NOT v_schema_exists THEN
         RAISE EXCEPTION 'Schema does not exist: %', p_schema_name;
     END IF;
-    
+
     -- Check if table exists
     SELECT EXISTS(
-        SELECT 1 FROM information_schema.tables 
+        SELECT 1 FROM information_schema.tables
         WHERE table_schema = p_schema_name AND table_name = p_table_name
     ) INTO v_table_exists;
-    
+
     IF NOT v_table_exists THEN
         RAISE EXCEPTION 'Table does not exist: %.%', p_schema_name, p_table_name;
     END IF;
-    
+
     -- Check if table is partitioned
     SELECT EXISTS(
         SELECT 1 FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = p_schema_name 
+        WHERE n.nspname = p_schema_name
           AND c.relname = p_table_name
           AND c.relkind = 'p'  -- partitioned table
     ) INTO v_is_partitioned;
-    
+
     IF NOT v_is_partitioned THEN
         RAISE EXCEPTION 'Table %.% is not partitioned', p_schema_name, p_table_name;
     END IF;
-    
+
     -- Create partitions
     FOR r IN 0..p_count-1 LOOP
         EXECUTE format('CREATE TABLE IF NOT EXISTS %I."%s_p%3$s" PARTITION OF %I."%s"
-                       FOR VALUES WITH (MODULUS %5$L, REMAINDER %3$s);', 
+                       FOR VALUES WITH (MODULUS %5$L, REMAINDER %3$s);',
                        p_schema_name, p_table_name, r, p_schema_name, p_table_name, p_count);
     END LOOP;
 END

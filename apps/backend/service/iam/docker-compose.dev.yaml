@@ -1,0 +1,34 @@
+services:
+  postgres: &postgres
+#    image: postgres:14-alpine
+    build:
+      context: .
+      dockerfile: ../../../../docker/postgres/Dockerfile
+      target: postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${DB_NAME}", "-U", "${DB_USER}"]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data:rw
+    ports:
+      - "${DB_PORT}:5432"
+
+  postgres-test:
+    <<: *postgres
+    volumes:
+      - ./database/clean_up.sql:/tmp/clean_up.sql
+    ports:
+      - "${DB_PORT_TEST}:5432"
+
+volumes:
+  postgres_data:
+
+secrets:
+  github_token:
+    environment: GH_PAT
