@@ -28,8 +28,8 @@ info:
     name: IAM Team
     email: iam-team@company.com
   license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
+    name: Apache 2.0
+    url: https://opensource.org/licenses/Apache-2.0
 
 servers:
   production:
@@ -56,13 +56,13 @@ channels:
     messages:
       userCreated:
         $ref: '#/components/messages/UserCreated'
-  
+
   iam.user.updated:
     address: iam.user.updated
     messages:
       userUpdated:
         $ref: '#/components/messages/UserUpdated'
-  
+
   iam.user.deleted:
     address: iam.user.deleted
     messages:
@@ -415,6 +415,11 @@ components:
     UserCreatedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -448,6 +453,7 @@ components:
           description: Source of user creation
           example: "admin_created"
       required:
+        - tenant_id
         - user_id
         - name
         - email
@@ -457,6 +463,11 @@ components:
     UserUpdatedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -488,6 +499,7 @@ components:
           description: ID of user who made the update
           example: "usr_admin789"
       required:
+        - tenant_id
         - user_id
         - changes
         - updated_by
@@ -495,6 +507,11 @@ components:
     UserDeletedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -518,6 +535,7 @@ components:
           description: Reason for deletion
           example: "Employee left the company"
       required:
+        - tenant_id
         - user_id
         - name
         - email
@@ -526,6 +544,11 @@ components:
     UserManagerChangedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -545,12 +568,18 @@ components:
           description: ID of user who made the change
           example: "usr_admin789"
       required:
+        - tenant_id
         - user_id
         - changed_by
 
     UserStatusChangedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -575,6 +604,7 @@ components:
           description: Reason for status change
           example: "Policy violation"
       required:
+        - tenant_id
         - user_id
         - old_status
         - new_status
@@ -586,6 +616,11 @@ components:
     RoleCreatedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         role_id:
           type: string
           description: Role record ID
@@ -608,6 +643,7 @@ components:
           description: ID of user who created this role
           example: "usr_admin789"
       required:
+        - tenant_id
         - role_id
         - label
         - api_name
@@ -616,6 +652,11 @@ components:
     RoleUpdatedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         role_id:
           type: string
           description: Role record ID
@@ -638,6 +679,7 @@ components:
           description: ID of user who made the update
           example: "usr_admin789"
       required:
+        - tenant_id
         - role_id
         - changes
         - updated_by
@@ -645,6 +687,11 @@ components:
     RoleDeletedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         role_id:
           type: string
           description: Role record ID
@@ -662,6 +709,7 @@ components:
           description: ID of user who deleted this role
           example: "usr_admin789"
       required:
+        - tenant_id
         - role_id
         - label
         - api_name
@@ -670,6 +718,11 @@ components:
     RoleHierarchyChangedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         role_id:
           type: string
           description: Role record ID
@@ -689,12 +742,18 @@ components:
           description: ID of user who made the change
           example: "usr_admin789"
       required:
+        - tenant_id
         - role_id
         - changed_by
 
     RolePermissionsChangedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         role_id:
           type: string
           description: Role record ID
@@ -721,6 +780,7 @@ components:
           description: ID of user who made the change
           example: "usr_admin789"
       required:
+        - tenant_id
         - role_id
         - permission_changes
         - changed_by
@@ -731,6 +791,11 @@ components:
     LoginSuccessPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -762,6 +827,7 @@ components:
           description: Authentication method used
           example: "password"
       required:
+        - tenant_id
         - user_id
         - principal_id
         - login
@@ -770,6 +836,11 @@ components:
     LoginFailedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         login:
           type: string
           description: Login identifier attempted
@@ -798,12 +869,18 @@ components:
           description: User ID if user was found
           example: "usr_a1b2c3d4e5f67890"
       required:
+        - tenant_id
         - login
         - reason
 
     LogoutPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -826,6 +903,7 @@ components:
           description: Session duration in seconds
           example: 3600
       required:
+        - tenant_id
         - user_id
         - principal_id
         - session_id
@@ -834,6 +912,11 @@ components:
     TokenRefreshedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -856,6 +939,7 @@ components:
           description: Reason for token refresh
           example: "expired"
       required:
+        - tenant_id
         - user_id
         - principal_id
         - new_token_id
@@ -864,6 +948,11 @@ components:
     PasswordChangedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -887,6 +976,7 @@ components:
           description: Client IP address
           example: "192.168.1.100"
       required:
+        - tenant_id
         - user_id
         - principal_id
         - changed_by
@@ -895,6 +985,11 @@ components:
     PasswordResetRequestedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -919,6 +1014,7 @@ components:
           description: Client IP address
           example: "192.168.1.100"
       required:
+        - tenant_id
         - user_id
         - email
         - reset_token
@@ -927,6 +1023,11 @@ components:
     PasswordResetCompletedPayload:
       type: object
       properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant identifier for multi-tenant isolation
+          example: "550e8400-e29b-41d4-a716-446655440000"
         user_id:
           type: string
           description: User record ID
@@ -949,6 +1050,7 @@ components:
           description: Client IP address
           example: "192.168.1.100"
       required:
+        - tenant_id
         - user_id
         - principal_id
         - reset_token
