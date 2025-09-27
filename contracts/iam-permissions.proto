@@ -1,0 +1,278 @@
+syntax = "proto3";
+
+package iam.permissions.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/adverax/metacrm/contracts";
+
+// ========================================
+// PERMISSION SERVICE
+// ========================================
+
+// Service for retrieving user permissions and group memberships
+service PermissionService {
+  // Get user's object permissions for a specific object
+  rpc GetUserObjectPermissions(GetUserObjectPermissionsRequest) returns (GetUserObjectPermissionsResponse);
+  
+  // Get user's field permissions for a specific field
+  rpc GetUserFieldPermissions(GetUserFieldPermissionsRequest) returns (GetUserFieldPermissionsResponse);
+  
+  // Get user's group memberships
+  rpc GetUserGroupMemberships(GetUserGroupMembershipsRequest) returns (GetUserGroupMembershipsResponse);
+  
+  // Get all object permissions for a user
+  rpc GetAllUserObjectPermissions(GetAllUserObjectPermissionsRequest) returns (GetAllUserObjectPermissionsResponse);
+  
+  // Get all field permissions for a user within an object
+  rpc GetAllUserFieldPermissions(GetAllUserFieldPermissionsRequest) returns (GetAllUserFieldPermissionsResponse);
+  
+  // Check if user has specific permission on object
+  rpc CheckUserObjectPermission(CheckUserObjectPermissionRequest) returns (CheckUserObjectPermissionResponse);
+  
+  // Check if user has specific permission on field
+  rpc CheckUserFieldPermission(CheckUserFieldPermissionRequest) returns (CheckUserFieldPermissionResponse);
+  
+  // Get permission details for multiple objects at once
+  rpc GetBulkObjectPermissions(GetBulkObjectPermissionsRequest) returns (GetBulkObjectPermissionsResponse);
+  
+  // Get permission details for multiple fields at once
+  rpc GetBulkFieldPermissions(GetBulkFieldPermissionsRequest) returns (GetBulkFieldPermissionsResponse);
+}
+
+// ========================================
+// REQUEST MESSAGES
+// ========================================
+
+message GetUserObjectPermissionsRequest {
+  string tenant_id = 1;        // Tenant identifier (UUID)
+  string user_id = 2;          // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  string object_api_name = 3;  // Object API name (e.g., "user", "order", "product")
+  optional int32 ttl_seconds = 4; // Cache TTL in seconds (default: 3600)
+}
+
+message GetUserFieldPermissionsRequest {
+  string tenant_id = 1;        // Tenant identifier (UUID)
+  string user_id = 2;          // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  string object_api_name = 3;  // Object API name (e.g., "user", "order")
+  string field_api_name = 4;   // Field API name (e.g., "email", "salary")
+  optional int32 ttl_seconds = 5; // Cache TTL in seconds (default: 3600)
+}
+
+message GetUserGroupMembershipsRequest {
+  string tenant_id = 1;        // Tenant identifier (UUID)
+  string user_id = 2;          // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  optional bool include_inherited = 3; // Include inherited memberships (default: true)
+  optional bool include_nested = 4;    // Include nested group memberships (default: true)
+}
+
+message GetAllUserObjectPermissionsRequest {
+  string tenant_id = 1;        // Tenant identifier (UUID)
+  string user_id = 2;          // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  optional int32 ttl_seconds = 3; // Cache TTL in seconds (default: 3600)
+}
+
+message GetAllUserFieldPermissionsRequest {
+  string tenant_id = 1;        // Tenant identifier (UUID)
+  string user_id = 2;          // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  string object_api_name = 3;  // Object API name (e.g., "user", "order")
+  optional int32 ttl_seconds = 4; // Cache TTL in seconds (default: 3600)
+}
+
+message CheckUserObjectPermissionRequest {
+  string tenant_id = 1;        // Tenant identifier (UUID)
+  string user_id = 2;          // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  string object_api_name = 3;  // Object API name (e.g., "user", "order")
+  PermissionType permission = 4; // Required permission type
+  optional int32 ttl_seconds = 5; // Cache TTL in seconds (default: 3600)
+}
+
+message CheckUserFieldPermissionRequest {
+  string tenant_id = 1;        // Tenant identifier (UUID)
+  string user_id = 2;          // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  string object_api_name = 3;  // Object API name (e.g., "user", "order")
+  string field_api_name = 4;   // Field API name (e.g., "email", "salary")
+  PermissionType permission = 5; // Required permission type
+  optional int32 ttl_seconds = 6; // Cache TTL in seconds (default: 3600)
+}
+
+message GetBulkObjectPermissionsRequest {
+  string tenant_id = 1;        // Tenant identifier (UUID)
+  string user_id = 2;          // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  repeated string object_api_names = 3; // List of object API names
+  optional int32 ttl_seconds = 4; // Cache TTL in seconds (default: 3600)
+}
+
+message GetBulkFieldPermissionsRequest {
+  string tenant_id = 1;        // Tenant identifier (UUID)
+  string user_id = 2;          // User record ID (e.g., "usr_a1b2c3d4e5f67890")
+  string object_api_name = 3;  // Object API name (e.g., "user", "order")
+  repeated string field_api_names = 4; // List of field API names
+  optional int32 ttl_seconds = 5; // Cache TTL in seconds (default: 3600)
+}
+
+// ========================================
+// RESPONSE MESSAGES
+// ========================================
+
+message GetUserObjectPermissionsResponse {
+  ObjectPermission permission = 1;
+  CacheInfo cache_info = 2;
+}
+
+message GetUserFieldPermissionsResponse {
+  FieldPermission permission = 1;
+  CacheInfo cache_info = 2;
+}
+
+message GetUserGroupMembershipsResponse {
+  repeated GroupMembership memberships = 1;
+  int32 total_count = 2;
+}
+
+message GetAllUserObjectPermissionsResponse {
+  repeated ObjectPermission permissions = 1;
+  int32 total_count = 2;
+  CacheInfo cache_info = 3;
+}
+
+message GetAllUserFieldPermissionsResponse {
+  repeated FieldPermission permissions = 1;
+  int32 total_count = 2;
+  CacheInfo cache_info = 3;
+}
+
+message CheckUserObjectPermissionResponse {
+  bool has_permission = 1;
+  PermissionType required_permission = 2;
+  PermissionType actual_permission = 3;
+  CacheInfo cache_info = 4;
+}
+
+message CheckUserFieldPermissionResponse {
+  bool has_permission = 1;
+  PermissionType required_permission = 2;
+  PermissionType actual_permission = 3;
+  CacheInfo cache_info = 4;
+}
+
+message GetBulkObjectPermissionsResponse {
+  repeated ObjectPermission permissions = 1;
+  int32 total_count = 2;
+  CacheInfo cache_info = 3;
+}
+
+message GetBulkFieldPermissionsResponse {
+  repeated FieldPermission permissions = 1;
+  int32 total_count = 2;
+  CacheInfo cache_info = 3;
+}
+
+// ========================================
+// DATA MESSAGES
+// ========================================
+
+message ObjectPermission {
+  string object_api_name = 1;  // Object API name (e.g., "user", "order")
+  int64 object_id = 2;         // Internal object ID
+  PermissionBitmask permissions = 3; // Combined permission bitmask
+  repeated PermissionSource sources = 4; // Sources of permissions (groups, roles, direct)
+  google.protobuf.Timestamp computed_at = 5; // When permissions were computed
+}
+
+message FieldPermission {
+  string object_api_name = 1;  // Object API name (e.g., "user", "order")
+  string field_api_name = 2;   // Field API name (e.g., "email", "salary")
+  int64 object_id = 3;         // Internal object ID
+  int64 field_id = 4;          // Internal field ID
+  PermissionBitmask permissions = 5; // Combined permission bitmask
+  repeated PermissionSource sources = 6; // Sources of permissions (groups, roles, direct)
+  google.protobuf.Timestamp computed_at = 7; // When permissions were computed
+}
+
+message GroupMembership {
+  string group_record_id = 1;  // Group record ID (e.g., "grp_a1b2c3d4e5f67890")
+  string group_label = 2;      // Group display name
+  string group_api_name = 3;   // Group API name
+  GroupType group_type = 4;    // Type of group
+  MembershipType membership_type = 5; // How user became a member
+  string related_entity_id = 6; // Related entity (role or territory) if applicable
+  google.protobuf.Timestamp joined_at = 7; // When user joined the group
+  google.protobuf.Timestamp expires_at = 8; // When membership expires (if applicable)
+}
+
+message PermissionSource {
+  SourceType source_type = 1;  // Type of source (group, role, direct)
+  string source_id = 2;        // ID of the source
+  string source_name = 3;      // Name of the source
+  PermissionBitmask permissions = 4; // Permissions from this source
+  int32 priority = 5;          // Priority of this source (higher = more important)
+}
+
+message PermissionBitmask {
+  int32 value = 1;             // Raw bitmask value
+  bool can_read = 2;           // READ permission (bit 0, value 1)
+  bool can_update = 3;         // UPDATE permission (bit 1, value 2)
+  bool can_create = 4;         // CREATE permission (bit 2, value 4)
+  bool can_delete = 5;         // DELETE permission (bit 3, value 8)
+  repeated string permission_names = 6; // Human-readable permission names
+}
+
+message CacheInfo {
+  bool from_cache = 1;         // Whether data came from cache
+  google.protobuf.Timestamp cached_at = 2; // When data was cached
+  google.protobuf.Timestamp expires_at = 3; // When cache expires
+  int32 ttl_seconds = 4;       // Cache TTL in seconds
+}
+
+// ========================================
+// ENUMS
+// ========================================
+
+enum PermissionType {
+  PERMISSION_TYPE_UNSPECIFIED = 0;
+  PERMISSION_TYPE_READ = 1;    // Read permission (bit 0)
+  PERMISSION_TYPE_CREATE = 2;  // Create permission (bit 1)
+  PERMISSION_TYPE_UPDATE = 4;  // Update permission (bit 2)
+  PERMISSION_TYPE_DELETE = 8;  // Delete permission (bit 3)
+}
+
+enum GroupType {
+  GROUP_TYPE_UNSPECIFIED = 0;
+  GROUP_TYPE_ROLE_BASED = 1;   // Role-based group
+  GROUP_TYPE_TERRITORY_BASED = 2; // Territory-based group
+  GROUP_TYPE_MANUAL = 3;       // Manually managed group
+  GROUP_TYPE_DYNAMIC = 4;      // Dynamically managed group
+}
+
+enum MembershipType {
+  MEMBERSHIP_TYPE_UNSPECIFIED = 0;
+  MEMBERSHIP_TYPE_DIRECT = 1;  // Direct membership
+  MEMBERSHIP_TYPE_INHERITED = 2; // Inherited through role
+  MEMBERSHIP_TYPE_AUTOMATIC = 3; // Automatic through group type
+}
+
+enum SourceType {
+  SOURCE_TYPE_UNSPECIFIED = 0;
+  SOURCE_TYPE_GROUP = 1;       // Permission from group membership
+  SOURCE_TYPE_ROLE = 2;        // Permission from role
+  SOURCE_TYPE_DIRECT = 3;      // Direct permission assignment
+  SOURCE_TYPE_TERRITORY = 4;   // Permission from territory
+}
+
+// ========================================
+// ERROR CODES
+// ========================================
+
+// Error codes for gRPC status
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  ERROR_CODE_USER_NOT_FOUND = 1;
+  ERROR_CODE_OBJECT_NOT_FOUND = 2;
+  ERROR_CODE_FIELD_NOT_FOUND = 3;
+  ERROR_CODE_GROUP_NOT_FOUND = 4;
+  ERROR_CODE_INVALID_TENANT = 5;
+  ERROR_CODE_PERMISSION_DENIED = 6;
+  ERROR_CODE_CACHE_ERROR = 7;
+  ERROR_CODE_INVALID_REQUEST = 8;
+}
