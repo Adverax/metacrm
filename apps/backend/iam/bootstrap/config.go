@@ -65,8 +65,9 @@ func (that *Config) Load() error {
 	}
 
 	if globalConfig != "" {
+		env := strings.ToLower(os.Getenv("ENV"))
 		ext := filepath.Ext(globalConfig)
-		localConfig := strings.TrimSuffix(globalConfig, ext) + ".local" + ext
+		localConfig := strings.TrimSuffix(globalConfig, ext) + "." + env + ext
 		loader, err := yamlConfig.NewFileLoaderBuilder().
 			WithFile(globalConfig, false).
 			WithFile(localConfig, false).
@@ -85,6 +86,7 @@ func (that *Config) Load() error {
 		if err != nil {
 			return err
 		}
+		that.Env = env
 	}
 
 	return nil

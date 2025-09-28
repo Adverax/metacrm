@@ -1,0 +1,4 @@
+log:
+  output: stdout
+  level: "debug"
+  format: "json" # options: text, json
