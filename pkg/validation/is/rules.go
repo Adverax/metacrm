@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"unicode"
 
-	"github.com/adverax/metacrm/validation"
+	"github.com/adverax/metacrm/pkg/validation"
 	"github.com/asaskevich/govalidator"
 )
 

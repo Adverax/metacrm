@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/adverax/metacrm/validation"
+	"github.com/adverax/metacrm/pkg/validation"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -3,6 +3,7 @@ module github.com/adverax/metacrm/pkg
 go 1.25.0
 
 require (
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/google/cel-go v0.26.1
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/stretchr/testify v1.11.1
