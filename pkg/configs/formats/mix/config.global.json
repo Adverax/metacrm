@@ -1,0 +1,7 @@
+{
+  "address": {
+    "host": "google.com",
+    "port": 81
+  },
+  "name": "My App"
+}

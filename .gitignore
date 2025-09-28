@@ -1,3 +1,5 @@
 /.idea/
 .env
 profile.cov
+go.work
+go.work.sum
